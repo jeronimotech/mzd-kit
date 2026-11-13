@@ -1,0 +1,50 @@
+/* Full screen 800x480. Old-WebKit safe: floats/absolute positioning, no CSS variables. */
+.tablero {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 50% 40%, #1b1d22 0%, #0b0c0e 70%, #050506 100%);
+  overflow: hidden;
+}
+.glow {
+  position: absolute; left: 200px; top: 40px; width: 400px; height: 300px; border-radius: 50%;
+  opacity: 0.35; filter: blur(60px);
+  background: #d0102a;
+}
+
+.row { position: absolute; top: 18px; left: 0; right: 0; height: 340px; }
+.center { position: absolute; left: 235px; top: 0; width: 330px; }
+.side { position: absolute; top: 90px; width: 200px; }
+.side.left { left: 26px; }
+.side.right { right: 26px; }
+
+.gauge { position: relative; }
+.gauge svg { position: absolute; top: 0; left: 0; }
+.gcenter { position: absolute; left: 0; right: 0; top: 50%; margin-top: -40px; text-align: center; }
+.gvalue { font-size: 46px; font-weight: bold; line-height: 52px; color: #fff; letter-spacing: -1px; }
+.gunit { font-size: 15px; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+.gauge.big .gcenter { margin-top: -66px; }
+.gauge.big .gvalue { font-size: 104px; line-height: 110px; letter-spacing: -4px; }
+.gauge.big .gunit { font-size: 20px; letter-spacing: 6px; }
+.gauge.warn .gvalue, .gauge.warn .gunit { color: #ffa726; }
+.gauge.warn .arc { stroke: #ffa726 !important; }
+
+/* accents */
+.tablero[data-accent="soulred"] .arc { stroke: #d0102a; }
+.tablero[data-accent="blue"] .arc { stroke: #1f6bff; }
+.tablero[data-accent="neon"] .arc { stroke: #18c37a; }
+.tablero[data-accent="silver"] .arc { stroke: #c9ced6; }
+.tablero[data-accent="soulred"] .glow { background: #d0102a; }
+.tablero[data-accent="blue"] .glow { background: #1f6bff; }
+.tablero[data-accent="neon"] .glow { background: #18c37a; }
+.tablero[data-accent="silver"] .glow { background: #8c929c; }
+
+/* bottom strip */
+.strip {
+  position: absolute; left: 24px; right: 24px; bottom: 18px; height: 86px;
+  border-radius: 18px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+}
+.stat { float: left; width: 25%; height: 86px; padding: 16px 0 0 26px; }
+.sicon { float: left; width: 38px; padding-top: 12px; color: rgba(255,255,255,0.55); }
+.svalue { font-size: 28px; font-weight: bold; line-height: 32px; color: #fff; }
+.slabel { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+.stat.warn .svalue, .stat.warn .sicon { color: #ffa726; }
+.clock { float: right; width: 25%; height: 86px; line-height: 86px; text-align: right; padding-right: 28px; font-size: 38px; font-weight: bold; color: #fff; }

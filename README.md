@@ -3,7 +3,7 @@
 **Build apps for the Mazda Connect infotainment system with modern JavaScript.**
 SDK · simulator · ES5 compiler · internet bridge — in one `npm` package.
 
-![mzd-kit simulator running the Clima example](docs/img/simulator-clima.png)
+![Tablero: full-screen dashboard example](docs/img/simulator-tablero.png)
 
 Mazda Connect (the "CMU", 2014–2020 Mazda 2/3/6/CX-3/CX-5/CX-9/MX-5) runs a web-based UI on a
 2013-era WebKit. The community [Custom Applications SDK](https://github.com/flyandi/mazda-custom-application-sdk)
@@ -80,7 +80,8 @@ defineApp({
 ```
 
 See [docs/API.md](docs/API.md) for the full API, and [`examples/`](examples) for
-**Hola Mazda** (dashboard + themes) and **Clima** (weather via the bridge, with offline cache).
+**Tablero** (full-screen 800×480 dashboard, `statusbar: false`), **Hola Mazda** (dashboard + themes),
+**Clima** (weather via the bridge, with offline cache) and **Asistente** (AI assistant).
 
 ![Hola Mazda example](docs/img/simulator-hola.png)
 

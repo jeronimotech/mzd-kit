@@ -193,8 +193,15 @@
     }
   }
 
+  // Apps with statusbar:false get the whole 800x480 screen, like on the CMU.
+  function setStatusbar(visible) {
+    $('#statusbar').style.display = visible ? '' : 'none';
+    $('#surface').style.top = visible ? '64px' : '0';
+  }
+
   function showMenu() {
     host.exit(true);
+    setStatusbar(true);
     $('#surface').style.display = 'none';
     $('#menu').style.display = 'block';
     $('#title').textContent = 'Aplicaciones';
@@ -211,6 +218,7 @@
     if (host.launch(id)) {
       var app = host.apps().filter(function (a) { return a.id === id; })[0];
       $('#title').textContent = app ? app.title : id;
+      setStatusbar(!app || app.statusbar);
       save();
     }
   }

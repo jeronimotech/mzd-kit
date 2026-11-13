@@ -74,7 +74,7 @@
   window.MzdHost = {
     on: function (name, fn) { (listeners[name] = listeners[name] || []).push(fn); },
     apps: function () {
-      return order.map(function (id) { return { id: id, title: registry[id].app.getTitle() }; });
+      return order.map(function (id) { return { id: id, title: registry[id].app.getTitle(), statusbar: registry[id].app.getSetting('statusbar') !== false }; });
     },
     current: function () { return current; },
 

@@ -11,7 +11,7 @@ import { defineApp, h, render, list, fmt, injectCss, SIGNALS, version } from 'mz
 | `title` | `string` | Shown in the app list and status bar |
 | `setup(app)` | `function` | Called once when the app is first opened. May return a cleanup function |
 | `id` | `string` | Optional. Defaults to the folder name (`app.<name>`) |
-| `statusbar` | `boolean` | Show the status bar (default `true`) |
+| `statusbar` | `boolean` | Show the status bar (default `true`). `false` gives the app the full 800×480 screen |
 | `bridge` | `string` | Bridge base URL for `app.net` (e.g. `http://192.168.1.20:7070`) |
 
 The app's drawing area is **800×416 px** below the status bar (800×480 without it).
