@@ -21,6 +21,9 @@ host already installed on cars (via MZD-AIO-TI) and makes writing apps pleasant 
 - **Internet for the car.** The CMU browser can't speak modern TLS and has little RAM. The
   **bridge** does the heavy lifting on a phone/laptop/server and hands the car small JSON.
   `app.net` adds timeouts and an offline cache, because signal comes and goes on the road.
+- **An AI assistant (Claude).** Pick a quick phrase with the knob, or talk to it from your phone;
+  it searches the web, knows where the car is, answers in a few glanceable sentences and the
+  phone reads the answer aloud.
 
 > ⚠️ **Status: v0.1, early.** The SDK and simulator are tested; running on a real car requires a
 > jailbroken CMU with the CASDK runtime installed and has **not yet been validated by us on
@@ -98,6 +101,26 @@ follows speed and heading), and cut the internet to test offline behavior. The s
 implements the same host interface as the car (`CustomApplicationsHandler`), so it runs the exact
 same compiled file you'll install.
 
+## The AI assistant
+
+![Asistente example](docs/img/simulator-asistente.png)
+
+The bridge can run [Claude](https://www.anthropic.com/claude) (`claude-opus-5-5` with web
+search) as an in-car assistant. Questions come from two places and land in one shared feed:
+
+- **The car** — `app.ai.ask('¿Hay pico y placa hoy?')`, e.g. from a knob-driven list of quick phrases.
+- **The phone** — open `http://<bridge>/companion`: talk (Web Speech API) or type; the answer
+  shows on the car screen and the phone reads it aloud.
+
+<img src="docs/img/companion.png" width="260" alt="Phone companion page">
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-… MZD_ASSISTANT_CITY=Bogotá MZD_ASSISTANT_TIMEZONE=America/Bogota mzd dev examples
+```
+
+The key lives only on the bridge, never in the car or in app code. The car's approximate
+location and speed are sent to the model as context. See [docs/ASSISTANT.md](docs/ASSISTANT.md).
+
 ## The bridge
 
 ```bash
@@ -109,6 +132,9 @@ MZD_BRIDGE_TOKEN=change-me mzd bridge --port 7070
 | `GET /v1/ping` | Health check |
 | `GET /v1/weather?lat=&lon=` | Current weather + next hours ([Open-Meteo](https://open-meteo.com), no key), Spanish descriptions |
 | `GET /v1/proxy?url=` | Fetch any http(s) URL for the car (≤1 MB; requires a token when public) |
+| `GET/POST /v1/assistant/ask` | Ask the AI assistant (returns immediately; the answer arrives in the feed) |
+| `GET /v1/assistant/feed?since=` | New and updated questions/answers |
+| `GET /companion` | Phone page: voice/text questions, answers read aloud |
 
 In the simulator the bridge is mounted at `/bridge`, so `app.net.get('/v1/weather?…')` just
 works. On the car, set the bridge address with `defineApp({ bridge: 'http://…' })`.
@@ -126,7 +152,9 @@ directory plus an `apps.js` listing them.
 - [ ] App-list integration for firmware newer than v70.00.335
 - [ ] `mzd deploy` over SSH/Wi-Fi to a jailbroken CMU, with hot reload on the car
 - [ ] USB installer package generation
-- [ ] More bridge services: news, traffic, music metadata, voice assistant
+- [x] AI assistant with web search, phone voice companion
+- [ ] Use the CMU's own microphone on a jailbroken unit (native capture → bridge)
+- [ ] More bridge services: news, traffic, music metadata
 - [ ] UI kit: gauges, charts, maps, dialogs, night mode
 - [ ] Record & replay real drive data in the simulator
 - [ ] Publish to npm
@@ -148,6 +176,7 @@ GPL-3.0 projects is included.
 ### 🇨🇴 En español
 
 **mzd-kit** es un kit para crear apps para el sistema Mazda Connect con JavaScript moderno:
-SDK, simulador, compilador a ES5 y un **puente a internet** para que las apps nativas del carro
-puedan usar servicios en línea con caché offline. Empieza con `mzd create app.mi-app` y
+SDK, simulador, compilador a ES5, un **puente a internet** para que las apps nativas del carro
+puedan usar servicios en línea con caché offline, y un **asistente de IA** (Claude) al que le
+preguntas con la perilla o por voz desde el celular. Empieza con `mzd create app.mi-app` y
 `mzd dev .`. La documentación de la API está en [docs/API.md](docs/API.md).

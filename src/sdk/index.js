@@ -20,13 +20,14 @@ import { createCar, SIGNALS } from './car.js';
 import { createControls } from './controls.js';
 import { createStore } from './store.js';
 import { createNet } from './net.js';
+import { createAi } from './ai.js';
 import { createEmitter } from './emitter.js';
 import { h, render, list, fmt } from './ui.js';
 import BASE_CSS from './base.css.js';
 
 export { h, render, list, fmt, SIGNALS };
 
-export const version = '0.1.0';
+export const version = '0.2.0';
 
 const injected = {};
 
@@ -91,14 +92,18 @@ export function defineApp(def) {
       root.className = 'mzd-app';
       canvas.appendChild(root);
 
+      const car = createCar((dataId, cb) => self.subscribe(dataId, cb));
+      const net = createNet(id, { bridge: def.bridge });
       ctx = {
         id: id,
         title: def.title || id,
         root: root,
-        car: createCar((dataId, cb) => self.subscribe(dataId, cb)),
+        car: car,
         controls: createControls(),
         store: createStore(id),
-        net: createNet(id, { bridge: def.bridge }),
+        net: net,
+        /** AI assistant through the bridge: ask(q, cb), watch(fn) */
+        ai: createAi(net, car),
         /** URL of a file shipped in the app's `public/` folder */
         asset: (file) => (self.location || ('apps/' + id + '/')) + file,
         /** lifecycle: `focus`, `blur` */

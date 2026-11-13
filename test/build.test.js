@@ -10,7 +10,7 @@ const EXAMPLES = new URL('../examples', import.meta.url).pathname;
 
 test('finds example apps by folder', () => {
   const ids = findApps(EXAMPLES).map((a) => a.id);
-  assert.deepEqual(ids, ['app.clima', 'app.hola']);
+  assert.deepEqual(ids, ['app.asistente', 'app.clima', 'app.hola']);
 });
 
 test('built apps are valid ES5 and register with the CASDK host', async () => {

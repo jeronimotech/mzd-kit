@@ -1,0 +1,17 @@
+.asistente { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 70% 10%, #2a0d14 0%, #0c0b0e 65%); }
+
+.side { position: absolute; top: 0; left: 0; bottom: 0; width: 300px; border-right: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25); }
+.side .mzd-list-item { height: 58px; line-height: 58px; padding: 0 22px; font-size: 19px; }
+
+.main { position: absolute; top: 0; left: 300px; right: 0; bottom: 0; }
+.scroller { position: absolute; top: 22px; left: 32px; right: 28px; bottom: 50px; overflow: hidden; }
+.question { font-size: 18px; color: rgba(255,255,255,0.55); margin-bottom: 12px; }
+.answer { font-size: 24px; line-height: 1.38; }
+.answer.pending { color: rgba(255,255,255,0.5); font-style: italic; }
+.answer.error { color: #ffb347; font-size: 22px; }
+
+.welcome .hello { font-size: 36px; font-weight: bold; margin: 30px 0 14px; }
+.welcome .mzd-muted { font-size: 19px; margin-bottom: 6px; }
+
+.status { position: absolute; left: 32px; right: 28px; bottom: 14px; font-size: 15px; color: rgba(255,255,255,0.45); }
+.status.warn { color: #ffb347; }

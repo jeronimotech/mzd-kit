@@ -1,6 +1,6 @@
 {
   "name": "mzd-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Modern toolkit to build apps for the Mazda Connect infotainment system (CMU): SDK, simulator, ES5 compiler and internet bridge.",
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,15 @@
     "type": "git",
     "url": "https://github.com/jeronimotech/mzd-kit"
   },
-  "keywords": ["mazda", "mazda-connect", "cmu", "infotainment", "casdk", "simulator", "car"],
+  "keywords": [
+    "mazda",
+    "mazda-connect",
+    "cmu",
+    "infotainment",
+    "casdk",
+    "simulator",
+    "car"
+  ],
   "bin": {
     "mzd": "bin/mzd.js"
   },
@@ -17,7 +25,13 @@
     ".": "./src/sdk/index.js",
     "./build": "./src/build/index.js"
   },
-  "files": ["bin", "src", "templates", "README.md", "LICENSE"],
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
   "engines": {
     "node": ">=22"
   },
@@ -27,6 +41,7 @@
     "build:examples": "node bin/mzd.js build examples --out dist"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@swc/core": "^1.16.22",
     "acorn": "^8.19.0",
     "autoprefixer": "^10.6.2",

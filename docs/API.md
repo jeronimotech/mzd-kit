@@ -71,6 +71,17 @@ Options: `cache` (seconds a cached copy counts as fresh; also enables offline fa
 `meta` is `{ fromCache, stale, age }`; when the network fails and a cached copy exists you get
 the cached data with `stale: true` instead of an error.
 
+### `app.ai`
+AI assistant through the bridge (needs `ANTHROPIC_API_KEY` on the bridge).
+
+| Method | |
+|---|---|
+| `ask(question, cb)` | Send a question with the car's location/speed as context. `cb(err, item)` fires when accepted (`status: "pending"`) |
+| `watch(fn, [ms])` | Poll the shared feed (car + phone questions). `fn(items)` gets new/updated items, oldest first. Returns a stop function |
+
+Items: `{ id, q, source: 'car' \| 'phone', status: 'pending' \| 'done' \| 'error', answer, ts, updated }`.
+Start `watch` on `focus` and stop it on `blur` (see `examples/app.asistente`).
+
 ### `app.every(ms, fn)`
 `setInterval` that returns a stop function (handy as `setup`'s return value).
 

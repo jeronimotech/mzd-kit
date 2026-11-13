@@ -96,3 +96,7 @@ h2 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 1.2px; color:
 .sig label .u { color: var(--muted); font-size: 12px; margin-left: 4px; }
 .sig input[type=number] { width: 96px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 4px 6px; font: 13px ui-monospace, Menlo, monospace; text-align: right; }
 .sig input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+
+.phone-link { display: inline-block; border: 1px solid var(--line); background: var(--panel-2); border-radius: 8px; padding: 8px 12px; color: var(--text); text-decoration: none; font-size: 13px; }
+.phone-link:hover { border-color: var(--accent); color: var(--accent-2); }
+.note { color: var(--muted); font-size: 12.5px; margin: 8px 0 0; line-height: 1.5; }

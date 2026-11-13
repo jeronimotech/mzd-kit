@@ -8,12 +8,20 @@
 //   /v1/ping                       → { ok, time, version }
 //   /v1/weather?lat=&lon=          → current + next hours (Open-Meteo, no API key)
 //   /v1/proxy?url=https://…        → fetches a URL for the car (requires a token unless local)
+//   /v1/assistant/ask?q=…          → asks the AI assistant (GET from the car, POST JSON from the phone)
+//   /v1/assistant/feed?since=…     → questions + answers newer than `since` (the car polls this)
+//   /companion                     → phone page: voice/text questions, answers read aloud
 //
 // Security: when MZD_BRIDGE_TOKEN is set, every request needs ?token=… or X-MZD-Token.
 // /v1/proxy is refused entirely without a token unless the bridge only listens on localhost.
 import http from 'node:http';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { createAssistant } from './assistant.js';
 
-export const BRIDGE_VERSION = '0.1.0';
+const COMPANION_HTML = fileURLToPath(new URL('./companion.html', import.meta.url));
+
+export const BRIDGE_VERSION = '0.2.0';
 const MAX_PROXY_BYTES = 1024 * 1024;
 
 const WMO_ES = {
@@ -28,12 +36,34 @@ const WMO_ES = {
   95: 'Tormenta', 96: 'Tormenta con granizo', 99: 'Tormenta fuerte con granizo',
 };
 
+function readJson(req, limit = 16 * 1024) {
+  return new Promise((resolve) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => { size += c.length; if (size <= limit) chunks.push(c); });
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); } catch { resolve({}); }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
+function ctxFrom(src) {
+  const ctx = {};
+  for (const k of ['lat', 'lon', 'speed']) {
+    const v = src[k] == null || src[k] === '' ? NaN : Number(src[k]);
+    if (isFinite(v)) ctx[k] = v;
+  }
+  return ctx;
+}
+
 function send(res, status, body) {
   const json = JSON.stringify(body);
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'X-MZD-Token',
+    'Access-Control-Allow-Headers': 'X-MZD-Token, Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Cache-Control': 'no-store',
   });
   res.end(json);
@@ -92,24 +122,43 @@ async function proxy(q) {
 
 /**
  * Create the bridge request handler.
- * @param {{ token?: string, local?: boolean }} [opts]  local = only reachable from this machine
+ * @param {{ token?: string, local?: boolean, assistant?: object, assistantClient?: object, log?: Function }} [opts]
+ *   local = only reachable from this machine; assistantClient lets tests inject a fake Anthropic client
  * @returns {(req, res, pathname: string, query: URLSearchParams) => Promise<void>}
  */
 export function createBridgeHandler(opts = {}) {
   const token = opts.token || process.env.MZD_BRIDGE_TOKEN || '';
+  const assistant = opts.assistant || createAssistant({ client: opts.assistantClient, log: opts.log });
   return async function handle(req, res, pathname, query) {
     if (req.method === 'OPTIONS') return send(res, 204, {});
     if (token && query.get('token') !== token && req.headers['x-mzd-token'] !== token) {
       return send(res, 401, { error: 'token required' });
     }
     try {
+      if (pathname === '/companion') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        return fs.createReadStream(COMPANION_HTML).pipe(res);
+      }
       if (pathname === '/v1/ping') return send(res, 200, { ok: true, time: new Date().toISOString(), version: BRIDGE_VERSION });
+      if (pathname === '/v1/assistant/ask') {
+        const body = req.method === 'POST' ? await readJson(req) : {};
+        const q = body.q || query.get('q');
+        const source = body.source || query.get('source') || (req.method === 'POST' ? 'phone' : 'car');
+        const ctx = ctxFrom(req.method === 'POST' ? body : Object.fromEntries(query));
+        assistant.setContext(ctx);
+        const item = assistant.ask(q, source, ctx);
+        return item ? send(res, 200, item) : send(res, 400, { error: 'q required' });
+      }
+      if (pathname === '/v1/assistant/feed') {
+        assistant.setContext(ctxFrom(Object.fromEntries(query)));
+        return send(res, 200, { now: Date.now(), items: assistant.feed(Number(query.get('since')) || 0) });
+      }
       if (pathname === '/v1/weather') { const [s, b] = await weather(query); return send(res, s, b); }
       if (pathname === '/v1/proxy') {
         if (!token && !opts.local) return send(res, 403, { error: 'proxy needs MZD_BRIDGE_TOKEN when the bridge is public' });
         const [s, b] = await proxy(query); return send(res, s, b);
       }
-      return send(res, 404, { error: 'unknown endpoint', endpoints: ['/v1/ping', '/v1/weather', '/v1/proxy'] });
+      return send(res, 404, { error: 'unknown endpoint', endpoints: ['/v1/ping', '/v1/weather', '/v1/proxy', '/v1/assistant/ask', '/v1/assistant/feed', '/companion'] });
     } catch (e) {
       return send(res, 502, { error: e.name === 'TimeoutError' ? 'upstream timeout' : String(e.message || e) });
     }
@@ -117,9 +166,9 @@ export function createBridgeHandler(opts = {}) {
 }
 
 /** Run the bridge as a standalone server. */
-export function startBridge({ port = 7070, host = '0.0.0.0', token } = {}) {
+export function startBridge({ port = 7070, host = '0.0.0.0', token, assistantClient, log } = {}) {
   const local = host === '127.0.0.1' || host === 'localhost';
-  const handle = createBridgeHandler({ token, local });
+  const handle = createBridgeHandler({ token, local, assistantClient, log });
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     handle(req, res, url.pathname, url.searchParams);

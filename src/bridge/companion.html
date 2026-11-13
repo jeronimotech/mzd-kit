@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0e0f12">
+  <title>Asistente del carro</title>
+  <style>
+    :root { --bg:#0e0f12; --card:#17191e; --line:#2a2e37; --text:#eceef2; --muted:#8b92a1; --accent:#d0102a; --accent2:#ff4d63; --ok:#33d17a; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { padding: max(16px, env(safe-area-inset-top)) 16px calc(150px + env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0; } h1 span { color: var(--accent2); }
+    .toggle { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+    .toggle input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin: 0 -16px 12px; padding-left: 16px; padding-right: 16px; scrollbar-width: none; }
+    .chips button { flex: none; border: 1px solid var(--line); background: var(--card); color: var(--text); border-radius: 999px; padding: 9px 14px; font-size: 14px; }
+    #feed { display: flex; flex-direction: column; gap: 12px; }
+    .item { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+    .q { color: var(--muted); font-size: 14px; margin-bottom: 6px; }
+    .q b { color: var(--text); font-weight: 600; }
+    .a { font-size: 17px; }
+    .pending .a { color: var(--muted); font-style: italic; }
+    .error .a { color: #ffb347; }
+    .empty { color: var(--muted); text-align: center; padding: 40px 10px; }
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, rgba(14,15,18,0), var(--bg) 30%); }
+    .bar { max-width: 608px; margin: 0 auto; display: flex; gap: 10px; align-items: center; }
+    #text { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 999px; padding: 14px 18px; font-size: 16px; }
+    #mic { flex: none; width: 64px; height: 64px; border-radius: 50%; border: 0; background: var(--accent); color: #fff; display: grid; place-items: center; box-shadow: 0 6px 20px rgba(208,16,42,.35); }
+    #mic.listening { background: var(--accent2); animation: pulse 1.2s infinite; }
+    #mic[hidden] { display: none; }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 14px rgba(255,77,99,.15); } }
+    .hint { max-width: 608px; margin: 8px auto 0; color: var(--muted); font-size: 12.5px; text-align: center; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span>mzd</span> asistente</h1>
+    <label class="toggle"><input type="checkbox" id="speak" checked> Leer en voz alta</label>
+  </header>
+
+  <div class="chips" id="chips"></div>
+  <div id="feed"><div class="empty">Pregunta por voz o escribe. La respuesta aparece aquí y en la pantalla del carro.</div></div>
+
+  <div class="dock">
+    <form class="bar" id="form">
+      <input id="text" type="text" placeholder="Pregúntale algo al carro…" autocomplete="off" enterkeyhint="send">
+      <button id="mic" type="button" aria-label="Hablar" hidden>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2Z"/></svg>
+      </button>
+    </form>
+    <div class="hint" id="hint"></div>
+  </div>
+
+<script>
+(function () {
+  var token = new URLSearchParams(location.search).get('token');
+  function api(path) { return path + (token ? (path.indexOf('?') < 0 ? '?' : '&') + 'token=' + encodeURIComponent(token) : ''); }
+
+  var QUICK = ['¿Qué hay cerca para comer?', '¿Hay pico y placa hoy?', 'Resúmeme las noticias', '¿Dónde hay una gasolinera cerca?', '¿Cómo estará el clima esta tarde?', 'Cuéntame un dato curioso'];
+  var feedEl = document.getElementById('feed');
+  var items = {}, since = 0, spoken = {}, firstLoad = true;
+
+  QUICK.forEach(function (q) {
+    var b = document.createElement('button');
+    b.textContent = q;
+    b.onclick = function () { ask(q); };
+    document.getElementById('chips').appendChild(b);
+  });
+
+  function ask(q) {
+    q = (q || '').trim();
+    if (!q) return;
+    fetch(api('v1/assistant/ask'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: q, source: 'phone' }) })
+      .then(function (r) { return r.json(); })
+      .then(function (it) { if (it && it.id) upsert(it); poll(); })
+      .catch(function () { alertLine('No se pudo enviar la pregunta.'); });
+  }
+
+  function alertLine(msg) { document.getElementById('hint').textContent = msg; }
+
+  function upsert(it) {
+    items[it.id] = it;
+    render();
+    if (it.status === 'done' && !spoken[it.id]) {
+      spoken[it.id] = true;
+      if (!firstLoad) say(it.answer);
+    }
+  }
+
+  function render() {
+    var list = Object.keys(items).map(function (k) { return items[k]; }).sort(function (a, b) { return b.id - a.id; });
+    if (!list.length) return;
+    feedEl.innerHTML = '';
+    list.forEach(function (it) {
+      var d = document.createElement('div');
+      d.className = 'item ' + it.status;
+      var q = document.createElement('div');
+      q.className = 'q';
+      q.innerHTML = (it.source === 'car' ? 'Desde el carro · ' : 'Tú · ') + '<b></b>';
+      q.querySelector('b').textContent = it.q;
+      var a = document.createElement('div');
+      a.className = 'a';
+      a.textContent = it.status === 'pending' ? 'Pensando…' : it.answer;
+      d.appendChild(q); d.appendChild(a);
+      feedEl.appendChild(d);
+    });
+  }
+
+  function say(text) {
+    if (!document.getElementById('speak').checked || !window.speechSynthesis || !text) return;
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = 'es-CO';
+    var v = speechSynthesis.getVoices().filter(function (v) { return /^es/i.test(v.lang); });
+    if (v.length) u.voice = v.filter(function (x) { return x.lang === 'es-CO'; })[0] || v.filter(function (x) { return x.lang === 'es-MX' || x.lang === 'es-US'; })[0] || v[0];
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+
+  var polling = false;
+  function poll() {
+    if (polling) return;
+    polling = true;
+    fetch(api('v1/assistant/feed?since=' + since))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        (d.items || []).forEach(function (it) { since = Math.max(since, it.updated || it.ts); upsert(it); });
+        firstLoad = false;
+      })
+      .catch(function () {})
+      .then(function () { polling = false; });
+  }
+  setInterval(poll, 2000);
+  poll();
+
+  document.getElementById('form').onsubmit = function (e) {
+    e.preventDefault();
+    var t = document.getElementById('text');
+    ask(t.value);
+    t.value = '';
+    t.blur();
+  };
+
+  // Voice: Web Speech API needs a secure context (https or localhost).
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var mic = document.getElementById('mic');
+  if (SR && window.isSecureContext) {
+    mic.hidden = false;
+    var rec = new SR();
+    rec.lang = 'es-CO';
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    var finalText = '';
+    rec.onresult = function (e) {
+      var interim = '';
+      finalText = '';
+      for (var i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      document.getElementById('text').value = finalText || interim;
+    };
+    rec.onend = function () {
+      mic.classList.remove('listening');
+      if (finalText) { ask(finalText); document.getElementById('text').value = ''; }
+    };
+    rec.onerror = function (e) { alertLine(e.error === 'not-allowed' ? 'Permite el micrófono para hablarle al asistente.' : 'No te escuché, intenta de nuevo.'); };
+    mic.onclick = function () {
+      if (window.speechSynthesis) speechSynthesis.cancel();
+      if (mic.classList.contains('listening')) { rec.stop(); return; }
+      finalText = '';
+      mic.classList.add('listening');
+      alertLine('');
+      try { rec.start(); } catch (e) { mic.classList.remove('listening'); }
+    };
+    alertLine('Toca el micrófono y habla.');
+  } else {
+    alertLine('Para hablar, usa el micrófono de tu teclado. (El botón de voz necesita abrir esta página por https.)');
+  }
+})();
+</script>
+</body>
+</html>

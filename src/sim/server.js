@@ -64,7 +64,7 @@ export async function startSim({ appsDir, port = 5173, host = '127.0.0.1', log =
     timer = setTimeout(() => { log(`Changed: ${file}`); rebuild(file); }, 120);
   });
 
-  const bridge = createBridgeHandler({ local: host === '127.0.0.1' || host === 'localhost' });
+  const bridge = createBridgeHandler({ local: host === '127.0.0.1' || host === 'localhost', log: (m) => log(`  ${m}`) });
 
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
@@ -84,6 +84,7 @@ export async function startSim({ appsDir, port = 5173, host = '127.0.0.1', log =
     }
 
     if (p.startsWith('/bridge/')) return bridge(req, res, p.slice('/bridge'.length), url.searchParams);
+    if (p === '/companion') { res.writeHead(302, { Location: '/bridge/companion' }); return res.end(); }
 
     const m = p.match(/^\/apps\/([^/]+)\/(.+)$/);
     if (m) {
