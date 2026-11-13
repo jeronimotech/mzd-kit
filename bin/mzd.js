@@ -112,11 +112,12 @@ const commands = {
   async bridge() {
     const { startBridge } = await import('../src/bridge/index.js');
     const host = opts.host || '0.0.0.0';
-    const port = Number(opts.port || 7070);
+    const port = Number(opts.port || process.env.PORT || 7070); // PORT is set by hosts like Railway
     const token = opts.token || process.env.MZD_BRIDGE_TOKEN;
     await startBridge({ port, host, token });
     console.log(`${c.bold('mzd-kit bridge')}  ${c.ok(`http://${host}:${port}`)}`);
     console.log(c.dim(token ? 'Token required (?token=… or X-MZD-Token)' : 'No token set: /v1/proxy is disabled on public interfaces (set MZD_BRIDGE_TOKEN)'));
+    if (process.env.MZD_BRIDGE_PUBLIC === '1') console.log(c.dim('Public mode: per-device feeds, rate limits, daily assistant budget, proxy off'));
   },
 };
 

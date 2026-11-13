@@ -115,3 +115,32 @@ test('bridge endpoints: car asks by GET, phone by POST, both see the feed', asyn
     server.close();
   }
 });
+
+test('public bridge: per-device private feeds, device required, limits, proxy off', async () => {
+  const client = fakeClient((p) => reply('ok: ' + p.messages.at(-1).content.split('\n\n').pop()));
+  const server = await startBridge({
+    port: 0, host: '127.0.0.1', assistantClient: client, public: true,
+    perDeviceHour: 2, perIpHour: 100, dailyLimit: 3,
+  });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const ask = (device, q) => fetch(base + '/v1/assistant/ask', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q, device }),
+  });
+  try {
+    assert.equal((await ask(undefined, 'hola')).status, 400); // device required
+    assert.equal((await ask('short', 'hola')).status, 400); // invalid id
+    assert.equal((await ask('phone-aaaaaaaa', 'secreto de A')).status, 200);
+    assert.equal((await ask('phone-bbbbbbbb', 'pregunta de B')).status, 200);
+    await wait(20);
+    const feedA = await (await fetch(base + '/v1/assistant/feed?since=0&device=phone-aaaaaaaa')).json();
+    const feedB = await (await fetch(base + '/v1/assistant/feed?since=0&device=phone-bbbbbbbb')).json();
+    assert.deepEqual(feedA.items.map((i) => i.q), ['secreto de A']);
+    assert.deepEqual(feedB.items.map((i) => i.q), ['pregunta de B']);
+    assert.equal((await ask('phone-aaaaaaaa', 'otra')).status, 200); // A: 2/2 per hour, budget 3/3
+    assert.equal((await ask('phone-aaaaaaaa', 'una más')).status, 429); // per-device limit
+    assert.equal((await ask('phone-cccccccc', 'nuevo')).status, 429); // daily budget spent
+    assert.equal((await fetch(base + '/v1/proxy?url=https://example.com')).status, 403);
+  } finally {
+    server.close();
+  }
+});

@@ -36,6 +36,7 @@
     "node": ">=22"
   },
   "scripts": {
+    "start": "node bin/mzd.js bridge",
     "test": "node --test \"test/*.test.js\"",
     "dev": "node bin/mzd.js dev examples",
     "build:examples": "node bin/mzd.js build examples --out dist"

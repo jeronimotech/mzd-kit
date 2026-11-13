@@ -14,10 +14,17 @@
 //
 // Security: when MZD_BRIDGE_TOKEN is set, every request needs ?token=… or X-MZD-Token.
 // /v1/proxy is refused entirely without a token unless the bridge only listens on localhost.
+//
+// Public mode (MZD_BRIDGE_PUBLIC=1, for a cloud bridge used by the mobile app):
+//   - every assistant call needs a `device` id; each device has its own private feed
+//   - rate limits per device and per IP, and a global daily budget of assistant questions
+//     (MZD_ASSISTANT_DAILY_LIMIT, default 1000) to cap API spend
+//   - /v1/proxy is disabled
 import http from 'node:http';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createAssistant } from './assistant.js';
+import { createRateLimiter, createDailyBudget, createDeviceMap, validDevice, clientIp } from './limits.js';
 
 const COMPANION_HTML = fileURLToPath(new URL('./companion.html', import.meta.url));
 
@@ -122,13 +129,25 @@ async function proxy(q) {
 
 /**
  * Create the bridge request handler.
- * @param {{ token?: string, local?: boolean, assistant?: object, assistantClient?: object, log?: Function }} [opts]
+ * @param {{ token?: string, local?: boolean, public?: boolean, assistantClient?: object, log?: Function,
+ *           dailyLimit?: number, perDeviceHour?: number, perIpHour?: number }} [opts]
  *   local = only reachable from this machine; assistantClient lets tests inject a fake Anthropic client
  * @returns {(req, res, pathname: string, query: URLSearchParams) => Promise<void>}
  */
 export function createBridgeHandler(opts = {}) {
   const token = opts.token || process.env.MZD_BRIDGE_TOKEN || '';
-  const assistant = opts.assistant || createAssistant({ client: opts.assistantClient, log: opts.log });
+  const isPublic = opts.public ?? process.env.MZD_BRIDGE_PUBLIC === '1';
+  const assistants = createDeviceMap(() => createAssistant({ client: opts.assistantClient, log: opts.log }));
+  const budget = createDailyBudget(opts.dailyLimit ?? Number(process.env.MZD_ASSISTANT_DAILY_LIMIT || (isPublic ? 1000 : 0)));
+  const perDevice = createRateLimiter({ max: opts.perDeviceHour ?? 30, windowMs: 3600_000 });
+  const perIp = createRateLimiter({ max: opts.perIpHour ?? 90, windowMs: 3600_000 });
+
+  // Self-hosted bridges keep the original single shared feed (car + phone of one owner).
+  function deviceOf(value) {
+    if (!isPublic) return validDevice(value) ? value : 'default';
+    return validDevice(value) ? value : null;
+  }
+
   return async function handle(req, res, pathname, query) {
     if (req.method === 'OPTIONS') return send(res, 204, {});
     if (token && query.get('token') !== token && req.headers['x-mzd-token'] !== token) {
@@ -142,19 +161,30 @@ export function createBridgeHandler(opts = {}) {
       if (pathname === '/v1/ping') return send(res, 200, { ok: true, time: new Date().toISOString(), version: BRIDGE_VERSION });
       if (pathname === '/v1/assistant/ask') {
         const body = req.method === 'POST' ? await readJson(req) : {};
+        const device = deviceOf(body.device || query.get('device'));
+        if (!device) return send(res, 400, { error: 'device required' });
         const q = body.q || query.get('q');
+        if (!q || !String(q).trim()) return send(res, 400, { error: 'q required' });
+        if (isPublic && (!perDevice.allow(device) || !perIp.allow(clientIp(req)))) {
+          return send(res, 429, { error: 'Demasiadas preguntas. Intenta de nuevo en un rato.' });
+        }
+        if (!budget.take()) return send(res, 429, { error: 'El asistente alcanzó su límite de hoy. Vuelve mañana.' });
+        const assistant = assistants.get(device);
         const source = body.source || query.get('source') || (req.method === 'POST' ? 'phone' : 'car');
         const ctx = ctxFrom(req.method === 'POST' ? body : Object.fromEntries(query));
         assistant.setContext(ctx);
-        const item = assistant.ask(q, source, ctx);
-        return item ? send(res, 200, item) : send(res, 400, { error: 'q required' });
+        return send(res, 200, assistant.ask(q, source, ctx));
       }
       if (pathname === '/v1/assistant/feed') {
+        const device = deviceOf(query.get('device'));
+        if (!device) return send(res, 400, { error: 'device required' });
+        const assistant = assistants.get(device);
         assistant.setContext(ctxFrom(Object.fromEntries(query)));
         return send(res, 200, { now: Date.now(), items: assistant.feed(Number(query.get('since')) || 0) });
       }
       if (pathname === '/v1/weather') { const [s, b] = await weather(query); return send(res, s, b); }
       if (pathname === '/v1/proxy') {
+        if (isPublic) return send(res, 403, { error: 'proxy disabled on public bridges' });
         if (!token && !opts.local) return send(res, 403, { error: 'proxy needs MZD_BRIDGE_TOKEN when the bridge is public' });
         const [s, b] = await proxy(query); return send(res, s, b);
       }
@@ -166,9 +196,9 @@ export function createBridgeHandler(opts = {}) {
 }
 
 /** Run the bridge as a standalone server. */
-export function startBridge({ port = 7070, host = '0.0.0.0', token, assistantClient, log } = {}) {
+export function startBridge({ port = 7070, host = '0.0.0.0', token, assistantClient, log, ...limits } = {}) {
   const local = host === '127.0.0.1' || host === 'localhost';
-  const handle = createBridgeHandler({ token, local, assistantClient, log });
+  const handle = createBridgeHandler({ token, local, assistantClient, log, ...limits });
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     handle(req, res, url.pathname, url.searchParams);
