@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>mzd-kit simulator</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2714%27 fill=%27%23d0102a%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/sim.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">mzd</span>-kit <span class="sub">simulator</span></div>
+    <div class="top-actions">
+      <button id="net-toggle" class="chip on" title="Simular conexión a internet">● En línea</button>
+      <span id="reload-state" class="chip ghost">recarga en vivo</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="bezel">
+        <div id="screen">
+          <div id="statusbar">
+            <button id="home-btn" title="Inicio (H)" aria-label="Inicio">
+              <svg viewBox="0 0 24 24" width="26" height="26"><path d="M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" fill="currentColor"/></svg>
+            </button>
+            <div id="title">Aplicaciones</div>
+            <div id="net-icon" title="Conexión"></div>
+            <div id="clock"></div>
+          </div>
+          <div id="menu"></div>
+          <div id="surface"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="knob-pad">
+          <button data-ev="upStart" class="k up" title="Arriba (↑)">▲</button>
+          <button data-ev="leftStart" class="k left" title="Izquierda (←)">◀</button>
+          <button data-ev="selectStart" class="k press" title="Presionar (Enter)">
+            <span class="knob"></span>
+          </button>
+          <button data-ev="rightStart" class="k right" title="Derecha (→)">▶</button>
+          <button data-ev="downStart" class="k down" title="Abajo (↓)">▼</button>
+        </div>
+        <div class="knob-side">
+          <button data-ev="ccw" class="pill" title="Girar a la izquierda ( [ o rueda del mouse )">↺ Girar</button>
+          <button data-ev="cw" class="pill" title="Girar a la derecha ( ] o rueda del mouse )">Girar ↻</button>
+          <button data-ev="goBack" class="pill" title="Atrás (Backspace / Esc)">⟲ Atrás</button>
+        </div>
+        <div class="keys">
+          <div><kbd>[</kbd> <kbd>]</kbd> o rueda del mouse: girar</div>
+          <div><kbd>Enter</kbd> presionar · <kbd>Esc</kbd> atrás · <kbd>H</kbd> inicio</div>
+          <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> mover la perilla</div>
+        </div>
+      </div>
+
+      <div class="log-wrap">
+        <div class="log-head"><span>Consola</span><button id="log-clear" class="link">limpiar</button></div>
+        <div id="log"></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="group">
+        <h2>Escenarios</h2>
+        <div id="scenarios" class="chips"></div>
+      </div>
+      <div class="group">
+        <h2>Vehículo</h2>
+        <div id="signals-vehicle"></div>
+      </div>
+      <div class="group">
+        <h2>GPS</h2>
+        <div id="signals-gps"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/host.js"></script>
+  <script src="/sim.js"></script>
+</body>
+</html>

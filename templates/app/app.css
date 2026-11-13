@@ -1,0 +1,9 @@
+/* Write plain CSS: mzd-kit scopes it to this app and adds old-WebKit prefixes. */
+.screen {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 30% 20%, #4a0a12 0%, #0b0203 75%);
+  text-align: center;
+  padding-top: 70px;
+}
+.value { font-size: 160px; font-weight: bold; line-height: 1; }
+.label { font-size: 26px; letter-spacing: 6px; text-transform: uppercase; color: #ff5a6e; margin-top: 12px; }

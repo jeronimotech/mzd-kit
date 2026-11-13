@@ -1,0 +1,38 @@
+/* Plain selectors: mzd-kit scopes them to this app automatically. */
+.hola {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: #0b0b0d;
+  transition: background 0.4s;
+}
+.hola[data-theme="soulred"] { background: radial-gradient(circle at 30% 20%, #4a0a12 0%, #120305 60%, #050102 100%); }
+.hola[data-theme="machine"] { background: radial-gradient(circle at 30% 20%, #3b3d42 0%, #16171a 60%, #08090a 100%); }
+.hola[data-theme="blue"]    { background: radial-gradient(circle at 30% 20%, #0c2a55 0%, #06112a 60%, #020610 100%); }
+.hola[data-theme="neon"]    { background: radial-gradient(circle at 30% 20%, #0c3b26 0%, #041a10 60%, #010805 100%); }
+
+.hola[data-theme="soulred"] .fill { background: #d0102a; }
+.hola[data-theme="machine"] .fill { background: #c9ccd2; }
+.hola[data-theme="blue"]    .fill { background: #2f7bff; }
+.hola[data-theme="neon"]    .fill { background: #31f29a; }
+.hola[data-theme="soulred"] .unit { color: #ff5a6e; }
+.hola[data-theme="machine"] .unit { color: #c9ccd2; }
+.hola[data-theme="blue"]    .unit { color: #6aa3ff; }
+.hola[data-theme="neon"]    .unit { color: #31f29a; }
+
+.greeting { position: absolute; top: 12px; left: 40px; font-size: 22px; color: rgba(255,255,255,0.7); }
+.main { position: absolute; top: 34px; left: 0; right: 0; text-align: center; }
+.big { font-size: 128px; line-height: 136px; font-weight: bold; letter-spacing: -4px; }
+.unit { font-size: 22px; letter-spacing: 6px; text-transform: uppercase; }
+
+.bar { position: absolute; top: 214px; left: 80px; right: 80px; height: 8px; background: rgba(255,255,255,0.12); border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; width: 0; transition: width 0.3s, background 0.4s; }
+.fill.redline { background: #ff2a2a !important; }
+
+.tiles { position: absolute; top: 240px; left: 60px; right: 60px; height: 88px; }
+.tile {
+  float: left; width: 30%; margin: 0 1.66%; height: 88px; padding-top: 10px; text-align: center;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); border-radius: 10px;
+}
+.tvalue { font-size: 36px; font-weight: bold; }
+.tlabel { font-size: 16px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 2px; }
+
+.theme-label { position: absolute; bottom: 10px; left: 0; right: 0; text-align: center; font-size: 15px; color: rgba(255,255,255,0.45); }
